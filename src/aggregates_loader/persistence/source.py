@@ -30,17 +30,18 @@ class Source:
 
         return cursor
 
-    def get_records(self, date_range) -> List[Tuple]:
+    def get_records(self, timeframe, date_range) -> List[Tuple]:
         """Fetch records with the provided keys.
 
         Args:
+            timeframe: timeframe to get records from.
             date_range: date range to get records from.
 
         Returns:
             List of records with matching keys.
         """
         cursor = self.cursor
-        query = "SELECT * " "FROM daily_base " "WHERE datadate between %s and %s; "
+        query = ("SELECT * " "FROM {timeframe}_base " "WHERE datadate between %s and %s; ").format(timeframe=timeframe)
 
         cursor.execute(query, (date_range[0], date_range[1]))
         res = cursor.fetchall()

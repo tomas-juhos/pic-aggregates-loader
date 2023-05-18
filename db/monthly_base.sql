@@ -18,6 +18,7 @@ CREATE TABLE monthly_base
     market_cap                          DECIMAL(30,15),
     shares_out                          DECIMAL(30,4),
     rtn                                 DECIMAL(25,15),
+    winsorized_5_rtn                    DECIMAL(25,15),
 
     dps                                 INTEGER,
 

@@ -111,7 +111,7 @@ class Loader:
                 logger.info(f"Persisted {i}/{n} {timeframe}.")
                 logger.debug("Fetching records...")
 
-                raw_records = self.source.get_records(date_range=date_range)
+                raw_records = self.source.get_records(timeframe="daily", date_range=date_range)
 
                 if raw_records:
                     logger.debug("Building history per gvkey...")
@@ -155,26 +155,73 @@ class Loader:
 
     def cleanup(self):
         """Removes records for companies that are not
-        traded a minimum of days (trading days - 3) in that given month."""
+        traded a minimum of days (trading days - 4) in that given month."""
         logger.info("Starting table cleanups...")
+        timeframes = ["monthly", "weekly", "daily"]
         months = date_helpers.generate_months(self.YEARS)
         i = 0
         n = len(months)
         for month in months:
             logger.debug(f"Cleaned {i}/{n} months...")
             max_dps = self.target.get_max_dps(month)
-            non_traded_gvkeys = self.target.get_non_traded_gvkeys(max_dps-3)
-
-            delete_query = ("DELETE FROM {timeframe}_base "
-                            "WHERE (datadate, gvkey) IN (VALUES %s)"
-                            "AND datadate BETWEEN {month_start} AND {month_end};")
-            for timeframe in self._timeframes:
-                query = delete_query.format(timeframe=timeframe, month_start=month[0], month_end=month[1])
-                self.target.execute(query, non_traded_gvkeys)
-                self.target.commit_transaction()
-            i += 1
+            if max_dps:
+                non_traded_gvkeys = self.target.get_non_traded_gvkeys(max_dps-4, month[0], month[1])
+                if non_traded_gvkeys:
+                    delete_query = ("DELETE FROM {timeframe}_base "
+                                    "WHERE (gvkey) IN (VALUES %s) "
+                                    "AND datadate BETWEEN {month_start} AND {month_end};")
+                    for timeframe in timeframes:
+                        query = delete_query.format(timeframe=timeframe, month_start=f"\'{month[0]}\'", month_end=f"\'{month[1]}\'")
+                        self.target.execute(query, non_traded_gvkeys)
+                        self.target.commit_transaction()
+                i += 1
         logger.debug(f"Cleaned {n}/{n} months...")
         logger.info("Terminating...")
+
+    def winsorize_returns(self):
+        timeframes = ["monthly", "weekly", "daily"]
+        date_intervals = date_helpers.generate_intervals(self.YEARS)
+        n = len(date_intervals)
+        for timeframe in timeframes:
+            logger.info(f"Processing {timeframe} records...")
+            i = 0
+            for date_interval in date_intervals:
+                logger.debug(f"Processed {i}/{n} date intervals.")
+                raw_records = self.source.get_records(timeframe=timeframe, date_range=date_interval)
+                raw_records = [model.BaseData.build_record(r) for r in raw_records]
+
+                if raw_records:
+                    logger.debug("Building history per date...")
+                    history: Dict[datetime, List[model.BaseData]] = {}
+                    for record in raw_records:
+                        if record.datadate not in history.keys():
+                            history[record.datadate] = [record]
+                        else:
+                            history[record.datadate].append(record)
+
+                    winsorized_returns = []
+                    for d, records in history.items():
+                        returns = [(r.datadate, r.gvkey, r.rtn) for r in records]
+                        returns.sort(key=lambda r: r[2])
+                        # CHANGE WINSORIZE FACTOR BELOW IF NEEDED
+                        quantile_index = len(returns) // 20
+                        high_value = returns[-quantile_index][2]
+                        low_value = returns[quantile_index][2]
+
+                        for r in returns:
+                            if r[2] > high_value:
+                                winsorized_returns.append((r[0], r[1], high_value))
+                            elif r[2] < low_value:
+                                winsorized_returns.append((r[0], r[1], low_value))
+                            else:
+                                winsorized_returns.append(r)
+                else:
+                    logger.info("No more records to process.")
+                    return
+
+                upsert_query = queries.WinsorizedReturnsQueries.UPSERT.format(timeframe=timeframe)
+                self.target.execute(upsert_query, winsorized_returns)
+                self.target.commit_transaction()
 
     @staticmethod
     def list_slicer(lst: List, slice_len: int) -> List[List]:
@@ -197,4 +244,6 @@ class Loader:
 
 
 loader = Loader()
-loader.run()
+#  loader.run()
+#  loader.cleanup()
+loader.winsorize_returns()

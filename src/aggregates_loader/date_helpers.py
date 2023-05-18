@@ -16,10 +16,6 @@ def is_week_end(d: datetime) -> bool:
 
 def is_month_end(d: datetime) -> bool:
     """Checks if date is the end of the month."""
-    if d.weekday() == 4:
-        next_3day = d + timedelta(days=3)
-        if d.month != next_3day.month:
-            return True
     next_day = d + timedelta(days=1)
     if d.month != next_day.month:
         return True
@@ -71,8 +67,21 @@ def generate_months(years: List[int]):
 def generate_intervals(years: List[int]):
     intervals = []
     for year in years:
-        intervals = intervals + [
-            (datetime(year, 1, 1), datetime(year, 12, 31)),
-        ]
+        first_day = datetime(year, 1, 1)
+        if first_day.weekday() == 0:
+            # first day monday, goes back to get last friday of the year
+            intervals = intervals + [
+                (first_day - timedelta(days=3), datetime(year, 12, 31))
+            ]
+        elif first_day.weekday() == 6:
+            # first day sunday, goes back to get last friday of the year
+            intervals = intervals + [
+                (first_day - timedelta(days=2), datetime(year, 12, 31))
+            ]
+        else:
+            # any other weekday has a weekday before
+            intervals = intervals + [
+                (first_day - timedelta(days=1), datetime(year, 12, 31))
+            ]
 
     return intervals

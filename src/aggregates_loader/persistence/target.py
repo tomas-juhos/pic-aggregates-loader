@@ -76,10 +76,10 @@ class Target:
 
         return dps[0] if dps else None
 
-    def get_non_traded_gvkeys(self, dps):
+    def get_non_traded_gvkeys(self, dps, month_start, month_end):
         cursor = self.cursor
-        query = "SELECT gvkey from monthly_base WHERE dps < %s;"
-        cursor.execute(query, (dps,))
+        query = "SELECT gvkey from monthly_base WHERE dps < %s AND datadate BETWEEN %s AND %s;"
+        cursor.execute(query, (dps, month_start, month_end))
         gvkeys = cursor.fetchall()
 
         return gvkeys if gvkeys else None
