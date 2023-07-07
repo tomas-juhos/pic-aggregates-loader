@@ -31,6 +31,7 @@ class AggregateBase(Modeling):
 
     market_cap: Optional[Decimal] = None
     shares_out: Optional[Decimal] = None
+    volume: Optional[Decimal] = None
     rtn: Optional[Decimal] = None
 
     dps: int
@@ -67,7 +68,8 @@ class AggregateBase(Modeling):
 
         market_cap_values = [r[13] for r in records if r[13]]
         shares_out_values = [r[14] for r in records if r[14]]
-        rtn_values = [r[15] for r in records if r[15] is not None]
+        volume_values = [r[15] for r in records if r[15]]
+        rtn_values = [r[16] for r in records if r[16] is not None]
 
         # AVG UTILIZATION PERCENT
         res.utilization_pct = (
@@ -134,6 +136,11 @@ class AggregateBase(Modeling):
             if shares_out_values
             else None
         )
+        res.volume = (
+            Decimal(sum(volume_values) / len(volume_values))
+            if volume_values
+            else None
+        )
         if rtn_values:
             agg_rtn = 1
             for r in rtn_values:
@@ -167,6 +174,7 @@ class AggregateBase(Modeling):
             self.loan_rate_stdev,
             self.market_cap,
             self.shares_out,
+            self.volume,
             self.rtn,
             self.dps
         )
@@ -187,6 +195,7 @@ class AggregateBase(Modeling):
             and self.loan_rate_stdev is None
             and self.market_cap is None
             and self.shares_out is None
+            and self.volume is None
             and self.rtn is None
         ):
             return True

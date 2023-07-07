@@ -23,6 +23,7 @@ class Queries(BaseQueries):
         "       loan_rate_stdev, "
         "       market_cap, "
         "       shares_out, "
+        "       volume, "
         "       rtn, "
         "       dps "
         ") VALUES %s "
@@ -43,6 +44,7 @@ class Queries(BaseQueries):
         "       loan_rate_stdev=EXCLUDED.loan_rate_stdev, "
         "       market_cap=EXCLUDED.market_cap, "
         "       shares_out=EXCLUDED.shares_out, "
+        "       volume=EXCLUDED.volume, "
         "       rtn=EXCLUDED.rtn, "
         "       dps=EXCLUDED.dps; "
     )

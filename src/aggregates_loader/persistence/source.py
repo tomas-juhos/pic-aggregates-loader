@@ -4,7 +4,6 @@ from typing import List, Tuple
 
 import psycopg2
 import psycopg2.extensions
-from psycopg2.extras import execute_values
 
 
 class Source:
@@ -41,7 +40,7 @@ class Source:
             List of records with matching keys.
         """
         cursor = self.cursor
-        query = ("SELECT * " "FROM {timeframe}_base " "WHERE datadate between %s and %s; ").format(timeframe=timeframe)
+        query = ("SELECT * " "FROM {timeframe}_base " "WHERE datadate BETWEEN %s AND %s ORDER BY datadate; ").format(timeframe=timeframe)
 
         cursor.execute(query, (date_range[0], date_range[1]))
         res = cursor.fetchall()

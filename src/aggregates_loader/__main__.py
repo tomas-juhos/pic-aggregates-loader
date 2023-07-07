@@ -179,6 +179,7 @@ class Loader:
         logger.info("Terminating...")
 
     def winsorize_returns(self):
+        logger.info('Winsorizing returns...')
         timeframes = ["monthly", "weekly", "daily"]
         date_intervals = date_helpers.generate_intervals(self.YEARS)
         n = len(date_intervals)
@@ -244,6 +245,6 @@ class Loader:
 
 
 loader = Loader()
-#  loader.run()
-#  loader.cleanup()
+loader.run()
+# loader.cleanup()
 loader.winsorize_returns()
